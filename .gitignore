@@ -5,3 +5,8 @@
 bin/
 target/
 *.log
+# InsurAI_project specific ignores
+/InsurAI_project/backend/target/
+/InsurAI_project/frontend/node_modules/
+/InsurAI_project/frontend/build/
+/InsurAI_project/.env
