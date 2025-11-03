@@ -12,20 +12,30 @@ export function AddPlanForm({ onAdd, onClose }) {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.description || !form.premium || !form.coverage) {
       toast.error("Please fill all fields.");
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      onAdd(form);
+    try {
+      const response = await fetch("/api/plans", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) throw new Error("Failed to add plan");
+      const newPlan = await response.json();
+      onAdd(newPlan); // update list in parent
       toast.success("Plan added!");
       setForm({ name: "", description: "", premium: "", coverage: "", status: "Active" });
       onClose();
-    }, 700);
+    } catch (error) {
+      toast.error("Error adding plan!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

@@ -4,49 +4,55 @@ import com.insurai.backend.entities.User;
 import com.insurai.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import java.util.*;
 
+@CrossOrigin(origins = "http://localhost:3000")
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:3000")
 public class UserController {
+
     @Autowired
     private UserRepository userRepository;
 
     @PostMapping("/register")
-    public User register(@RequestBody User user) {
-        if(user.getRole() == null || user.getRole().isEmpty()) {
-            user.setRole("user"); // default fallback for API calls
+    public ResponseEntity<?> register(@RequestBody User user) {
+        try {
+            if (user.getRole() == null || user.getRole().isEmpty()) {
+                user.setRole("user");
+            }
+            if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Email already registered!"));
+            }
+            User saved = userRepository.save(user);
+            return ResponseEntity.ok(saved);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Invalid data or server error!"));
         }
-        return userRepository.save(user);
     }
 
     @PostMapping("/login")
-    public Object login(@RequestBody User loginData) {
-        var userOptional = userRepository.findByEmail(loginData.getEmail())
-                .filter(user -> user.getPassword().equals(loginData.getPassword()));
-
-        if (userOptional.isPresent()) {
-            return new Response(userOptional.get());
-        } else {
-            return new ErrorResponse("Invalid credentials");
-        }
+    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
+        return userRepository.findByEmail(loginData.get("email"))
+                .filter(user -> user.getPassword().equals(loginData.get("password")))
+                .map(user -> ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "user", user
+                )))
+                .orElseGet(() -> ResponseEntity
+                        .status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Invalid credentials", "success", false)));
     }
+
+
 
     @GetMapping
     public List<User> getAllUsers() {
         return userRepository.findAll();
-    }
-
-    public static class Response {
-        public boolean success = true;
-        public User user;
-        public Response(User user) { this.user = user; }
-    }
-
-    public static class ErrorResponse {
-        public boolean success = false;
-        public String message;
-        public ErrorResponse(String msg) { this.message = msg; }
     }
 }

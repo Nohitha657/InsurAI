@@ -2,7 +2,7 @@ import { useState } from "react";
 import { UserPlus, User } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-export function AddAgentForm({ onAdd }) {
+export function AddAgentForm({ onAdd,onClose }) {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -12,19 +12,30 @@ export function AddAgentForm({ onAdd }) {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = e => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.specialization) {
       toast.error("Please fill all required fields.");
       return;
     }
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      onAdd(form);
+    try {
+      const response = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) throw new Error("Failed to add agent");
+      const newAgent = await response.json();
+      onAdd(newAgent); // update list in parent/Admin Dashboard
       toast.success("Agent added!");
       setForm({ name: "", email: "", phone: "", specialization: "", status: "active" });
-    }, 700);
+      onClose();
+    } catch (error) {
+      toast.error("Error adding agent!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
