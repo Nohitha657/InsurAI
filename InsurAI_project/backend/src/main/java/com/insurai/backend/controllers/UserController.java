@@ -1,5 +1,8 @@
 package com.insurai.backend.controllers;
 
+import com.insurai.backend.dto.UserProfileDTO;
+import com.insurai.backend.entities.Agent;
+import com.insurai.backend.entities.Plan;
 import com.insurai.backend.entities.User;
 import com.insurai.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,8 +54,27 @@ public class UserController {
 
 
 
-    @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    @GetMapping("/{id}/profile")
+    public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        Agent agent = user.getAgent();
+        Plan plan = user.getPlan();
+
+        // For demo, let's say totalAmount is 12 months of premium
+        double total = plan.getMonthlyPremium() * 12;
+        double paid = user.getPaidAmount(); // Or sum from payments table
+        double remaining = total - paid;
+
+        UserProfileDTO dto = new UserProfileDTO(
+                user.getFullName(),
+                user.getEmail(),
+                (agent != null ? agent.getName() : "N/A"),
+                (plan != null ? plan.getName() : "N/A"),
+                (plan != null ? plan.getDescription() : ""),
+                (plan != null ? plan.getMonthlyPremium() : 0.0),
+                total, paid, remaining
+        );
+        return ResponseEntity.ok(dto);
     }
+
 }

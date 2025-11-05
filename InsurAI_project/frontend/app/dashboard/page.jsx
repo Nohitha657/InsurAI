@@ -46,7 +46,11 @@ export default function DashboardPage() {
           <Sidebar selected={selected} setSelected={setSelected} />
         </aside>
         {/* Main Content Area */}
-        <main className="flex-1 p-8 bg-gray-50 min-h-0">
+        <main className="flex-1 p-8 bg-gray-50 min-h-0" 
+              style={{
+              height: "calc(100vh - 120px)", // Adjust 120px to match your header+footer height
+              overflowY: "auto",
+            }}>
           <div className="rounded-xl shadow bg-white p-8 min-h-[300px]">
             <h2 className="text-2xl font-bold text-blue-700 mb-4">{selected}</h2>
             <div>

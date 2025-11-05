@@ -1,93 +1,101 @@
 "use client";
-import { useState } from "react";
-import { FileText, Eye } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { FileText, Eye, Plus, Trash, Edit2 } from "lucide-react";
+
+const useAuth = () => ({ user: { role: "admin" } }); // or "user"
 
 export default function PlansPage() {
-  // Plans Data
-  const plans = [
-    {
-      name: "Health Secure",
-      description: "Comprehensive health insurance plan for families.",
-      premium: "₹10,000/year",
-      coverage: "₹5,00,000",
-      status: "Active",
-    },
-    {
-      name: "Life Shield",
-      description: "Long-term protection and tax benefits.",
-      premium: "₹15,000/year",
-      coverage: "₹10,00,000",
-      status: "Active",
-    }
-  ];
+  const { user } = useAuth();
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const [showPlans, setShowPlans] = useState(false);
+
+  // Claim
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [monthlyIncome, setMonthlyIncome] = useState("");
   const [claimResult, setClaimResult] = useState("");
+  const [showAllPlans, setShowAllPlans] = useState(false);
 
-  // Logic: Example eligibility check
-  const handleClaim = () => {
-    // Example rule: If monthly income > 25,000, user can claim any plan.
-    if (Number(monthlyIncome) > 25000) {
-      setClaimResult(
-        `You are eligible to claim the "${selectedPlan.name}" plan. Our team will contact you soon.`
-      );
-    } else {
-      setClaimResult(
-        `For "${selectedPlan.name}" you need a minimum monthly income of ₹25,001.`
-      );
+  // Load plans
+  useEffect(() => {
+    setLoading(true); // ensure loading spinner on refresh
+    fetch("http://localhost:8080/api/plans")
+      .then(res => res.json())
+      .then(data => setPlans(Array.isArray(data) ? data : []))
+      .catch(() => setPlans([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Handle claim button
+  const openClaimModal = (plan) => {
+    setSelectedPlan(plan);
+    setShowClaimModal(true);
+    setMonthlyIncome("");
+    setClaimResult("");
+  };
+  
+  const handleClaim = async () => {
+    // Client-only check, e.g., min. income
+    if (Number(monthlyIncome) < 10000) {
+      setClaimResult(`For ${selectedPlan.name}, you need a minimum monthly income of 10,000.`);
+      return;
     }
+    // Optionally POST to backend for actual claim
+    
+    await fetch(`http://localhost:8080/api/plans/${selectedPlan.id}/claim`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: user.email, monthlyIncome }),
+    });
+    
+    setClaimResult(`You are eligible to claim the ${selectedPlan.name} plan. Our team will contact you soon.`);
   };
 
+  if (loading) return <div>Loading plans...</div>;
+  const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
   return (
+
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center mb-8">
         <FileText className="text-blue-500 w-8 h-8 mr-3" />
         <h1 className="text-2xl font-bold text-blue-700">Plans</h1>
-        <button
-          className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
-          onClick={() => setShowPlans((curr) => !curr)}
-        >
-          <Eye className="w-5 h-5" /> {showPlans ? "Hide Plans" : "View Plans"}
-        </button>
+          <button
+            className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 font-medium"
+            onClick={() => setShowAllPlans(s => !s)}
+          >
+            <Eye className="w-5 h-5" /> {showAllPlans ? "Show One" : "View Plan"}
+          </button>
       </div>
-      {showPlans && (
-        <div className="space-y-6">
-          {plans.map((plan, i) => (
-            <div key={i} className="bg-white rounded-xl shadow p-6 border border-blue-100">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-semibold text-lg text-blue-700">{plan.name}</span>
-                <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">
-                  {plan.status}
-                </span>
-              </div>
-              <p className="text-blue-400 mb-2">{plan.description}</p>
-              <div className="flex gap-6 text-blue-600 mb-4">
-                <span className="font-medium">Premium: {plan.premium}</span>
-                <span className="font-medium">Coverage: {plan.coverage}</span>
-              </div>
+      <div className="space-y-6">
+        {plans.length === 0 && (
+          <div className="text-center text-blue-400 p-8 bg-blue-50 rounded-xl">
+            No plans available.
+          </div>
+        )}
+        {displayPlans.map((plan, i) => (
+          <div key={plan.id || i} className="bg-white rounded-xl shadow p-6 border border-blue-100">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-semibold text-lg text-blue-700">{plan.name}</span>
+            </div>
+            <p className="text-blue-400 mb-2">{plan.description}</p>
+            <div className="flex gap-6 text-blue-600 mb-4">
+              <span className="font-medium">Premium: {plan.monthlyPremium}</span>
+              <span className="font-medium">Coverage: {plan.coverageAmount}</span>
+            </div>
+            <div className="flex gap-2">
               <button
-                className="bg-blue-500 text-white rounded px-5 py-2 mt-2 hover:bg-blue-700"
-                onClick={() => {
-                  setSelectedPlan(plan);
-                  setShowClaimModal(true);
-                  setClaimResult("");
-                }}
+                className="bg-blue-500 text-white rounded px-5 py-2 hover:bg-blue-700"
+                onClick={() => openClaimModal(plan)}
               >
-                Claim Insurance
+                Claim
               </button>
             </div>
-          ))}
-          {plans.length === 0 && (
-            <div className="text-center text-blue-400 p-8 bg-blue-50 rounded-xl">
-              No plans available.
-            </div>
-          )}
-        </div>
-      )}
-
+          </div>
+        ))}
+      </div>
+      
+      
       {/* Claim Modal */}
       {showClaimModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50">
@@ -96,10 +104,8 @@ export default function PlansPage() {
               Claim Insurance: {selectedPlan?.name}
             </h2>
             {!claimResult ? (
-              <div>
-                <label className="block text-blue-700 font-medium mb-1">
-                  Enter your Monthly Income (₹)
-                </label>
+              <>
+                <label className="block text-blue-700 font-medium mb-1">Enter your Monthly Income</label>
                 <input
                   type="number"
                   className="border text-black border-blue-300 rounded px-3 py-2 mb-3 w-full"
@@ -123,9 +129,9 @@ export default function PlansPage() {
                 >
                   Cancel
                 </button>
-              </div>
+              </>
             ) : (
-              <div>
+              <>
                 <p className="mb-3 text-blue-700">{claimResult}</p>
                 <button
                   className="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-700"
@@ -136,7 +142,7 @@ export default function PlansPage() {
                 >
                   Done
                 </button>
-              </div>
+              </>
             )}
           </div>
         </div>
