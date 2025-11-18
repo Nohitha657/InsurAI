@@ -10,6 +10,15 @@ export function AddAgentForm({ onAdd,onClose }) {
     specialization: "",
     status: "active"
   });
+  const addAgent = (agent) => {
+    fetch('http://localhost:8080/api/agents', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(agent)
+    })
+      .then(res => res.json())
+      .then(newAgent => setAgents([...agents, newAgent]));
+  };
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -20,7 +29,7 @@ export function AddAgentForm({ onAdd,onClose }) {
     }
     setIsLoading(true);
     try {
-      const response = await fetch("/api/agents", {
+      const response = await fetch("http://localhost:8080/api/agents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

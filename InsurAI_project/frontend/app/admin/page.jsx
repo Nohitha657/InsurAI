@@ -3,8 +3,9 @@ import { useState,useEffect } from "react";
 import { User, Eye, Edit2,Trash, Users, Calendar, FileText, Plus } from "lucide-react";
 import { AddAgentForm } from "../../components/layout/newAgentForm"; 
 import { AddPlanForm } from "../../components/layout/newPlanForm";
-import Footer from "@/components/layout/Footer";
-
+import Footer from "../../components/layout/Footer";
+import { UserProfileInfo } from "../../components/layout/UserProfileInfo";
+import AgentList from "../../components/layout/AgentList";
 export default function AdminDashboard() {
   const [agents, setAgents] = useState([]);
   const [users, setUsers] = useState([]);
@@ -14,21 +15,38 @@ export default function AdminDashboard() {
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editPlan, setEditPlan] = useState(null);
+  const [showUserForm, setShowUserForm] = useState(false);
   const [showAllPlans, setShowAllPlans] = useState(false);
-
+  
   const summaryStats = [
-    { icon: <User className="w-7 h-7 text-blue-600" />, label: "Users", value: users.length },
+    { icon: <User className="w-7 h-7 text-blue-600" />, label: "Users", value: users.filter(u => u.role === "user").length },
     { icon: <Users className="w-7 h-7 text-blue-500" />, label: "Agents", value: agents.length },
     { icon: <Calendar className="w-7 h-7 text-blue-400" />, label: "Appointments", value: 0 },
     { icon: <FileText className="w-7 h-7 text-blue-300" />, label: "Plans", value: plans.length },
   ];
 
+  // Fetch plans (in useEffect)
   useEffect(() => {
     fetch("http://localhost:8080/api/plans")
       .then(res => res.json())
       .then(data => setPlans(Array.isArray(data) ? data : []))
       .catch(() => setPlans([]));
   }, []);
+
+  // Fetch users (in useEffect)
+  useEffect(() => {
+    fetch("http://localhost:8080/api/users/only-users")
+      .then(res => res.json())
+      .then(data => setUsers(data));
+  }, []);
+ 
+  //Fetch agents (in useEffect)
+  useEffect(() => {
+    fetch("http://localhost:8080/api/agents")
+      .then(res => res.json())
+      .then(data => setAgents(data));
+  }, []);
+
 
    // Add new plan to state
   const handleAdd = (plan) => setPlans(ps => [...ps, plan]);
@@ -49,7 +67,7 @@ export default function AdminDashboard() {
       alert("Failed to delete plan.");
     }
   };
-const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
+  const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
   return (
     <div className="bg-blue-50 max-w-7xl mx-auto px-6">
       <div className="mb-8 text-center pt-10">
@@ -76,17 +94,7 @@ const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
               <Plus className="w-4 h-4" /> Add Agent
             </button>
           </div>
-          <ul className="divide-y">
-            {agents.map((agent, i) => (
-              <li key={agent.email || i} className="py-3 flex justify-between items-center">
-                <div>
-                  <span className="font-medium text-blue-700">{agent.name}</span>
-                  <span className="ml-2 text-xs text-blue-400">{agent.email}</span>
-                </div>
-                <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">{agent.status}</span>
-              </li>
-            ))}
-          </ul>
+          <AgentList />
         </div>
         {/* Users Section */}
         <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
@@ -99,24 +107,27 @@ const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
             </button>
           </div>
           <ul className="divide-y">
-            {users.map((user, i) => (
+          {users
+            .filter(user => user.role === "user") // only show users with role === "user"
+            .map((user, i) => (
               <li key={user.email || i} className="py-3 flex justify-between items-center">
-              <div>
-                <span className="font-medium text-blue-700">{user.fullName}</span>
-                <span className="ml-2 text-xs text-blue-400">{user.email}</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">active</span>
-                <button
-                  className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-700"
-                  onClick={() => setSelectedProfileUser(user)}
-                >
-                  Profile
-                </button>
-              </div>
+                <div>
+                  <span className="font-medium text-gray-500">{user.fullName}</span>
+                  {/* <span className="ml-2 text-xs text-gray-400">{user.email}</span> */}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">active</span>
+                  <button
+                    className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-700"
+                    onClick={() => setSelectedProfileUser(user)}
+                  >
+                    Profile
+                  </button>
+                </div>
               </li>
-              ))}
-          </ul>
+            ))}
+        </ul>
+
         </div>
         {/*Plans Section */}
         <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100 mt-10" style={{
@@ -240,6 +251,23 @@ const displayPlans = showAllPlans ? plans : plans.slice(0, 1);
         />
       </Modal>
       )}
+      {showUserForm && (
+        <Modal onClose={() => setShowUserForm(false)}>
+          <div>
+            <h2 className="text-blue-500 font-bold text-lg mb-3">All Users</h2>
+            <ul>
+              {users.length === 0 && <li className="text-gray-500">No users found.</li>}
+              {users.map(user => (
+                <li key={user.id} className="mb-2 border-b pb-2">
+                  <span className="text-gray-500 font-semibold">{user.fullName}</span>
+                  <span className="ml-2 text-sm text-gray-500">{user.email}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Modal>
+      )}
+
        <Footer />
     </div>
   );

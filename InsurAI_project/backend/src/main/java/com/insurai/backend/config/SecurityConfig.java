@@ -9,6 +9,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 
@@ -24,6 +25,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/plans/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/plans/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/plans/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/agents/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/agents/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())

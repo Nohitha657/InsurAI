@@ -51,8 +51,10 @@ public class UserController {
                         .status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "Invalid credentials", "success", false)));
     }
-
-
+    @GetMapping("/only-users")
+    public List<User> getOnlyUsers() {
+        return userRepository.findByRole("user");
+    }
 
     @GetMapping("/{id}/profile")
     public ResponseEntity<UserProfileDTO> getUserProfile(@PathVariable Long id) {
@@ -60,9 +62,8 @@ public class UserController {
         Agent agent = user.getAgent();
         Plan plan = user.getPlan();
 
-        // For demo, let's say totalAmount is 12 months of premium
-        double total = plan.getMonthlyPremium() * 12;
-        double paid = user.getPaidAmount(); // Or sum from payments table
+        double total = (plan != null ? plan.getMonthlyPremium() * 12 : 0.0);
+        double paid = user.getPaidAmount();
         double remaining = total - paid;
 
         UserProfileDTO dto = new UserProfileDTO(
@@ -76,5 +77,6 @@ public class UserController {
         );
         return ResponseEntity.ok(dto);
     }
+
 
 }
