@@ -138,6 +138,7 @@ export default function RegisterForm() {
                   >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
+                    
                   </select>
                   {/* Optional: down arrow for select */}
                   <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">

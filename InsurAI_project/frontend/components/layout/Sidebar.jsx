@@ -1,5 +1,5 @@
 export default function Sidebar({ selected, setSelected }) {
-  const options = ["Dashboard", "Appointments", "Agents", "Plans"];
+  const options = ["Profile", "Dashboard", "Appointments", "Agents", "Plans"];
   return (
     <nav className="flex flex-col space-y-2">
       {options.map(opt => (

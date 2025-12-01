@@ -1,15 +1,20 @@
 package com.insurai.backend.controllers;
 
+import com.insurai.backend.dto.LoginDTO;
 import com.insurai.backend.dto.UserProfileDTO;
 import com.insurai.backend.entities.Agent;
 import com.insurai.backend.entities.Plan;
 import com.insurai.backend.entities.User;
+import com.insurai.backend.repositories.AgentRepository;
 import com.insurai.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import java.util.*;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+
 
 @CrossOrigin(origins = "http://localhost:3000")
 @RestController
@@ -18,6 +23,9 @@ public class UserController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AgentRepository agentRepository;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
@@ -40,17 +48,37 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> loginData) {
-        return userRepository.findByEmail(loginData.get("email"))
-                .filter(user -> user.getPassword().equals(loginData.get("password")))
-                .map(user -> ResponseEntity.ok(Map.of(
+    public ResponseEntity<?> login(@RequestBody LoginDTO dto) {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+        // User login
+        Optional<User> userOpt = userRepository.findByEmail(dto.getEmail());
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            if (dto.getPassword().equals(user.getPassword())) {
+                return ResponseEntity.ok(Map.of(
                         "success", true,
-                        "user", user
-                )))
-                .orElseGet(() -> ResponseEntity
-                        .status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("message", "Invalid credentials", "success", false)));
+                        "user", Map.of("email", user.getEmail(),"fullName", user.getFullName(), "role", user.getRole())
+                ));
+            }
+        }
+
+        Optional<Agent> agentOpt = agentRepository.findByEmail(dto.getEmail());
+        if (agentOpt.isPresent()) {
+            Agent agent = agentOpt.get();
+            if (encoder.matches(dto.getPassword(), agent.getPassword())) {
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "user", Map.of("email", agent.getEmail(),"fullName", agent.getName(),  "role", "agent")
+                ));
+            }
+        }
+
+        return ResponseEntity.status(401).body(
+                Map.of("success", false, "message", "Invalid credentials")
+        );
     }
+
     @GetMapping("/only-users")
     public List<User> getOnlyUsers() {
         return userRepository.findByRole("user");

@@ -1,4 +1,5 @@
 package com.insurai.backend.entities;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -8,8 +9,8 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(name = "users")
-
 public class User {
+
     @ManyToOne
     @JoinColumn(name = "agent_id")
     private Agent agent;
@@ -18,12 +19,14 @@ public class User {
     @JoinColumn(name = "plan_id")
     private Plan plan;
 
-    private double paidAmount; // For paid tracking (or use payments table if you prefer)
+    private double paidAmount; // For paid tracking
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    // Map to column full_name in DB
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
     @Column(nullable = false, unique = true)
@@ -35,4 +38,3 @@ public class User {
     @Column(nullable = false)
     private String role; // "user" or "admin"
 }
-

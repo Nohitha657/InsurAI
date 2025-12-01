@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { Shield, User, Mail, Lock } from "lucide-react";
+import { Mail, Lock } from "lucide-react";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -30,12 +30,25 @@ export default function LoginForm() {
     return;
   }
   try {
-      const res = await axios.post("http://localhost:8080/api/users/login", { email, password }); // Use proxy or full backend URL
-      if (res.data.success && res.data.user) {
+      const res = await axios.post("http://localhost:8080/api/users/login", {
+      email,
+      password,
+      });
+      
+        if (res.data.success && res.data.user) {
+          console.log("LOGIN USER:", res.data.user);
+          const {email: userEmail, fullName, role} = res.data.user;
+        localStorage.setItem("userEmail", userEmail);
+        localStorage.setItem("userName", fullName || "User");
         toast.success("Login successful!");
+
         if (res.data.user.role === "admin") {
           router.push("/admin");
-        } else {
+        } else if (res.data.user.role === "agent") {
+          localStorage.setItem("agentEmail", userEmail);
+          router.push("/agent");
+        }
+        else {
           router.push("/dashboard");
         }
       } else {

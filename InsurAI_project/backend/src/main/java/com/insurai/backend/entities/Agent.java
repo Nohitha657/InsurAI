@@ -13,8 +13,10 @@ public class Agent {
     private Long id;
     private String name;
     private String email;
+    private String password;
     private String phone;
     private String specialization;
     private String status;
+    private boolean mustChangePassword;
 }
 

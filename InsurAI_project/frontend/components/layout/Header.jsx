@@ -8,7 +8,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-center gap-3">
           <Shield className="text-white w-8 h-8" />
-          <h1 className="text-2xl md:text-3xl font-bold text-white">InsurePro</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">InsureAI</h1>
         </div>
         <p className="text-center mt-2 text-sm opacity-90 text-white">Trusted Insurance Solutions</p>
       </div>
