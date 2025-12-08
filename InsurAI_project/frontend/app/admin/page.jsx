@@ -1,8 +1,20 @@
 "use client";
 import { useState, useEffect } from "react";
-import {User,Eye,Edit2,Trash,Users,Calendar,FileText,Plus,Shield,} from "lucide-react";
+import {
+  User,
+  Eye,
+  Edit2,
+  Trash,
+  Users,
+  Calendar,
+  FileText,
+  Plus,
+  Shield,
+} from "lucide-react";
 import AppointmentsPage from "../dashboard/appointments/page";
 import PlansDashboard from "../dashboard/plans/page";
+import { AddAgentForm } from "../../components/layout/newAgentForm";
+import { AddPlanForm } from "../../components/layout/newPlanForm";
 import Footer from "../../components/layout/Footer";
 import { UserProfileInfo } from "../../components/layout/UserProfileInfo";
 import AgentList from "../../components/layout/AgentList";
@@ -13,12 +25,14 @@ export default function AdminDashboard() {
   const [plans, setPlans] = useState([]);
   const [showAgentForm, setShowAgentForm] = useState(false);
   const [selectedProfileUser, setSelectedProfileUser] = useState(null);
+  const [isAgentProfile, setIsAgentProfile] = useState(false);
   const [showPlanForm, setShowPlanForm] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [editPlan, setEditPlan] = useState(null);
   const [showUserForm, setShowUserForm] = useState(false);
   const [showAllPlans, setShowAllPlans] = useState(false);
-  
+  const [requestedClaims, setRequestedClaims] = useState([]);
+  const [approveMsg, setApproveMsg] = useState("");
   // layout state
   const [selected, setSelected] = useState("Profile"); // Profile, Dashboard, Appointments,User, Agents, Plans
   const [userName, setUserName] = useState("");
@@ -31,62 +45,6 @@ export default function AdminDashboard() {
     address: "",
   });
   const [isAdminEditing, setIsAdminEditing] = useState(false);
-
-  useEffect(() => {
-  if (typeof window === "undefined") return;
-
-  const emailFromStorage =
-    localStorage.getItem("adminEmail") || localStorage.getItem("userEmail");
-
-  const storedProfileRaw = localStorage.getItem("adminProfile");
-  if (storedProfileRaw) {
-    try {
-      const stored = JSON.parse(storedProfileRaw);
-      setAdminProfile(stored);
-      setUserName(stored.fullName || "Admin");
-      return; // skip backend if local copy exists
-    } catch {
-      // ignore parse error and continue to backend
-    }
-  }
-
-  if (!emailFromStorage) {
-    window.location.href = "/login";
-    return;
-  }
-
-  const nameFromStorage = localStorage.getItem("userName");
-  setUserName(nameFromStorage || "Admin");
-
-  const fetchAdmin = async () => {
-    try {
-      const res = await fetch(
-        `http://localhost:8080/api/users/me?email=${encodeURIComponent(
-          emailFromStorage
-        )}`
-      );
-      if (!res.ok) return;
-      const data = await res.json();
-      const profile = {
-        id: data.id,
-        fullName: data.fullName || nameFromStorage || "Admin",
-        email: data.email || emailFromStorage,
-        role: data.role || "admin",
-        phone: data.phone || "",
-        address: data.address || "",
-        profileImageUrl: data.profileImageUrl || "",
-      };
-      setAdminProfile(profile);
-      setUserName(profile.fullName);
-    } catch (e) {
-      console.error("Error loading admin profile", e);
-    }
-  };
-
-  fetchAdmin();
-  }, []); 
-
-
   const summaryStats = [
     {
       icon: <User className="w-7 h-7 text-blue-600" />,
@@ -109,6 +67,96 @@ export default function AdminDashboard() {
       value: plans.length,
     },
   ];
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const emailFromStorage =
+      localStorage.getItem("adminEmail") || localStorage.getItem("userEmail");
+
+    const storedProfileRaw = localStorage.getItem("adminProfile");
+    if (storedProfileRaw) {
+      try {
+        const stored = JSON.parse(storedProfileRaw);
+        setAdminProfile(stored);
+        setUserName(stored.fullName || "Admin");
+        return; // skip backend if local copy exists
+      } catch {
+        // ignore parse error and continue to backend
+      }
+    }
+
+    if (!emailFromStorage) {
+      window.location.href = "/login";
+      return;
+    }
+
+    const nameFromStorage = localStorage.getItem("userName");
+    setUserName(nameFromStorage || "Admin");
+
+    const fetchAdmin = async () => {
+      try {
+        const res = await fetch(
+          `http://localhost:8080/api/users/me?email=${encodeURIComponent(
+            emailFromStorage
+          )}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const profile = {
+          id: data.id,
+          fullName: data.fullName || nameFromStorage || "Admin",
+          email: data.email || emailFromStorage,
+          role: data.role || "admin",
+          phone: data.phone || "",
+          address: data.address || "",
+          profileImageUrl: data.profileImageUrl || "",
+        };
+        setAdminProfile(profile);
+        setUserName(profile.fullName);
+      } catch (e) {
+        console.error("Error loading admin profile", e);
+      }
+    };
+
+    fetchAdmin();
+  }, []);
+  // -- Approve claim function --
+  const handleApprove = async (claimRow) => {
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/claims/${claimRow.id}/approve`,
+        { method: "PUT" }
+      );
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+
+      // update the requestedClaims list to show Approved
+      setRequestedClaims((prev) =>
+        prev.map((c) =>
+          c.id === claimRow.id
+            ? { ...c, status: "APPROVED", approvedDate: data.approvedDate }
+            : c
+        )
+      );
+
+      setApproveMsg(`Policy approved for ${claimRow.name}`);
+      setTimeout(() => setApproveMsg(""), 3000);
+    } catch (e) {
+      console.error(e);
+      setApproveMsg("Failed to approve");
+      setTimeout(() => setApproveMsg(""), 3000);
+    }
+  };
+
+  // Fetch requested claims
+  useEffect(() => {
+    const fetchRequestedClaims = async () => {
+      const res = await fetch("http://localhost:8080/api/claims/requests");
+      const data = await res.json();
+      setRequestedClaims(Array.isArray(data) ? data : []);
+    };
+    fetchRequestedClaims();
+  }, []);
 
   // Fetch plans
   useEffect(() => {
@@ -120,16 +168,40 @@ export default function AdminDashboard() {
 
   // Fetch users
   useEffect(() => {
-    fetch("http://localhost:8080/api/users/only-users")
-      .then((res) => res.json())
-      .then((data) => setUsers(data));
+    const loadUsers = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/api/users/only-users");
+        if (!res.ok) {
+          console.error("Failed to fetch users, status:", res.status);
+          return;
+        }
+        const data = await res.json();
+        setUsers(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching users:", err);
+      }
+    };
+
+    loadUsers();
   }, []);
 
   // Fetch agents
   useEffect(() => {
-    fetch("http://localhost:8080/api/agents")
-      .then((res) => res.json())
-      .then((data) => setAgents(data));
+    const loadAgents = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/api/agents");
+        if (!res.ok) {
+          console.error("Failed to fetch agents, status:", res.status);
+          return;
+        }
+        const data = await res.json();
+        setAgents(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching agents:", err);
+      }
+    };
+
+    loadAgents();
   }, []);
 
   const handleLogout = () => {
@@ -140,8 +212,8 @@ export default function AdminDashboard() {
     }
   };
   const handleAdminFieldChange = (e) => {
-  const { name, value } = e.target;
-  setAdminProfile((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = e.target;
+    setAdminProfile((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAdminImageChange = (e) => {
@@ -173,13 +245,14 @@ export default function AdminDashboard() {
     alert("Profile saved locally");
   };
 
-
   // Add new plan to state
   const handleAdd = (plan) => setPlans((ps) => [...ps, plan]);
 
   // Update plan in state after edit
   const handleUpdate = (updatedPlan) => {
-    setPlans((ps) => ps.map((p) => (p.id === updatedPlan.id ? updatedPlan : p)));
+    setPlans((ps) =>
+      ps.map((p) => (p.id === updatedPlan.id ? updatedPlan : p))
+    );
   };
 
   // Delete plan
@@ -224,39 +297,32 @@ export default function AdminDashboard() {
         {/* SIDEBAR */}
         <aside className="w-64 bg-white border-r border-blue-100 p-5 flex-shrink-0">
           <nav className="space-y-2">
-            {["Profile", "Dashboard", "Appointments", "Agents","Users", "Plans"].map(
-              (item) => (
-                <button
-                  key={item}
-                  onClick={() => setSelected(item)}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    selected === item
-                      ? "bg-blue-600 text-white"
-                      : "text-blue-700 hover:bg-blue-50"
-                  }`}
-                >
-                  {item === "Profile" && (
-                    <User className="w-4 h-4" />
-                  )}
-                  {item === "Dashboard" && (
-                    <Shield className="w-4 h-4" />
-                  )}
-                  {item === "Appointments" && (
-                    <Calendar className="w-4 h-4" />
-                  )}
-                  {item === "Agents" && (
-                    <Users className="w-4 h-4" />
-                  )}
-                  {item==="Users" && (
-                    <User className="w-4 h-4" />
-                  )}
-                  {item === "Plans" && (
-                    <FileText className="w-4 h-4" />
-                  )}
-                  <span>{item}</span>
-                </button>
-              )
-            )}
+            {[
+              "Profile",
+              "Dashboard",
+              "Appointments",
+              "Agents",
+              "Users",
+              "Plans",
+            ].map((item) => (
+              <button
+                key={item}
+                onClick={() => setSelected(item)}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                  selected === item
+                    ? "bg-blue-600 text-white"
+                    : "text-blue-700 hover:bg-blue-50"
+                }`}
+              >
+                {item === "Profile" && <User className="w-4 h-4" />}
+                {item === "Dashboard" && <Shield className="w-4 h-4" />}
+                {item === "Appointments" && <Calendar className="w-4 h-4" />}
+                {item === "Agents" && <Users className="w-4 h-4" />}
+                {item === "Users" && <User className="w-4 h-4" />}
+                {item === "Plans" && <FileText className="w-4 h-4" />}
+                <span>{item}</span>
+              </button>
+            ))}
           </nav>
         </aside>
 
@@ -268,9 +334,7 @@ export default function AdminDashboard() {
           {/* PROFILE VIEW (simple placeholder, you can plug your profile component here) */}
           {selected === "Profile" && (
             <div className="bg-white rounded-xl shadow-md p-6 border border-blue-100 max-w-3xl">
-              <h2 className="text-xl font-bold text-blue-700 mb-4">
-                Profile
-              </h2>
+              <h2 className="text-xl font-bold text-blue-700 mb-4">Profile</h2>
               <div className="flex items-center gap-6 mb-6">
                 <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
                   {adminProfile.profileImageUrl ? (
@@ -282,9 +346,7 @@ export default function AdminDashboard() {
                     />
                   ) : (
                     <span className="text-3xl font-bold text-gray-600">
-                      {(adminProfile.fullName ||
-                        adminProfile.email ||
-                        "A")
+                      {(adminProfile.fullName || adminProfile.email || "A")
                         .charAt(0)
                         .toUpperCase()}
                     </span>
@@ -390,7 +452,7 @@ export default function AdminDashboard() {
                       {adminProfile.phone || "Not set"}
                     </p>
                   ) : (
-                    <input 
+                    <input
                       type="text"
                       name="phone"
                       value={adminProfile.phone}
@@ -408,7 +470,7 @@ export default function AdminDashboard() {
                       {adminProfile.address || "Not set"}
                     </p>
                   ) : (
-                    <textarea 
+                    <textarea
                       name="address"
                       value={adminProfile.address}
                       onChange={handleAdminFieldChange}
@@ -420,7 +482,6 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
-
 
           {/* DASHBOARD: stats + recent agents/users/plans (your existing content) */}
           {selected === "Dashboard" && (
@@ -455,76 +516,157 @@ export default function AdminDashboard() {
 
           {/* APPOINTMENTS (placeholder for now) */}
           {selected === "Appointments" && (
-            <div className="bg-white rounded-xl shadow-md p-6 border border-blue-100">
-              <h2 className="text-xl font-bold text-blue-700 mb-4">
-                Appointments
+            <div>
+              <h2 className="text-lg font-semibold text-blue-700 mb-4">
+                Agent Requests (Claims)
               </h2>
-              <p className="text-blue-500">
-                Hook your appointments component here.
-              </p>
+
+              {approveMsg && (
+                <p className="mb-2 text-sm text-green-600">{approveMsg}</p>
+              )}
+
+              {requestedClaims.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No requests from agents yet.
+                </p>
+              ) : (
+                <table className="min-w-full text-sm border">
+                  <thead className="bg-gray-50 text-blue-700">
+                    <tr>
+                      <th className="px-3 py-2 text-left">User Name</th>
+                      <th className="px-3 py-2 text-left">Email</th>
+                      <th className="px-3 py-2 text-left">Gender</th>
+                      <th className="px-3 py-2 text-left">Policy</th>
+                      <th className="px-3 py-2 text-left">Location</th>
+                      <th className="px-3 py-2 text-left">Claim Date</th>
+                      <th className="px-3 py-2 text-left">Agent</th>
+                      <th className="px-3 py-2 text-left">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-blue-600">
+                    {requestedClaims.map((c, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="px-3 py-2">{c.name}</td>
+                        <td className="px-3 py-2">{c.email}</td>
+                        <td className="px-3 py-2">{c.gender}</td>
+                        <td className="px-3 py-2">{c.policyName}</td>
+                        <td className="px-3 py-2">{c.cityOrVillage}</td>
+                        <td className="px-3 py-2">{String(c.claimDate)}</td>
+                        <td className="px-3 py-2">{c.agentName}</td>
+                        <td className="px-3 py-2">
+                          {c.status === "APPROVED" ? (
+                            <span className="text-xs text-green-600">
+                              Approved
+                            </span>
+                          ) : (
+                            <button
+                              className="px-3 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700"
+                              onClick={() => handleApprove(c)}
+                            >
+                              Approve
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
           {/* AGENTS: reuse existing Agents section in full width */}
           {selected === "Agents" && (
-            <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
-              <div className="flex items-center mb-4">
-                <Users className="text-blue-500 w-6 h-6 mr-2" />
-                <span className="font-semibold text-xl text-blue-700">
-                  Agents
-                </span>
-                <button
-                  className="ml-auto px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                  onClick={() => setShowAgentForm(true)}
-                >
-                  <Plus className="w-4 h-4" /> Add Agent
-                </button>
-              </div>
-              <AgentList />
-            </div>
-          )}
+  <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
+    <div className="flex items-center mb-4">
+      <Users className="text-blue-500 w-6 h-6 mr-2" />
+      <span className="font-semibold text-xl text-blue-700">Agents</span>
+      <button
+        className="ml-auto px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        onClick={() => setShowAgentForm(true)}
+      >
+        <Plus className="w-4 h-4" /> Add Agent
+      </button>
+    </div>
+    
+    <ul className="divide-y">
+      {agents.length === 0 && (
+        <li className="py-3 text-gray-500">No agents found.</li>
+      )}
+      
+      {agents.map((agent, i) => (
+        <li
+          key={agent.id || agent.email || i}
+          className="py-3 flex justify-between items-center"
+        >
+          <div>
+            <span className="font-medium text-gray-800">{agent.name}</span>
+            <span className="ml-2 text-xs text-gray-400">{agent.email}</span>
+          </div>
+          <div className="flex gap-2 items-center">
+            <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700 capitalize">
+              {agent.status}
+            </span>
+            <button
+              className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-700"
+              onClick={() => {
+                setSelectedProfileUser(agent);
+                setIsAgentProfile(true);  // <-- Set this to true for agents
+              }}
+            >
+              Profile
+            </button>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
+
+
           {/* USERS: simple list of users with modal */}
           {selected === "Users" && (
-            <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
-              <div className="flex items-center mb-4">
-                <User className="text-blue-500 w-6 h-6 mr-2" />
-                <span className="font-semibold text-xl text-blue-700">
-                  Users
-                </span>
-              </div>
-              <ul className="divide-y">
-                {users.filter((u) => u.role === "user").length === 0 && (
-                  <li className="py-3 text-gray-500">No users found.</li>
-                )}
+  <div className="bg-white shadow-md rounded-xl p-6 border border-blue-100">
+    <div className="flex items-center mb-4">
+      <User className="text-blue-500 w-6 h-6 mr-2" />
+      <span className="font-semibold text-xl text-blue-700">Users</span>
+    </div>
+    <ul className="divide-y">
+      {users.filter((u) => u.role === "user").length === 0 && (
+        <li className="py-3 text-gray-500">No users found.</li>
+      )}
 
-                {users
-                  .filter((u) => u.role === "user")
-                  .map((u, i) => (
-                    <li
-                      key={u.id || u.email || i}
-                      className="py-3 flex justify-between items-center"
-                    >
-                      <div>
-                        <span className="font-medium text-gray-800">
-                          {u.fullName}
-                        </span>
-                      </div>
-                      <div className="flex gap-2 items-center">
-                        <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">
-                          active
-                        </span>
-                        <button
-                          className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-700"
-                          onClick={() => setSelectedProfileUser(u)}
-                        >
-                          Profile
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-              </ul>
+      {users
+        .filter((u) => u.role === "user")
+        .map((u, i) => (
+          <li
+            key={u.id || u.email || i}
+            className="py-3 flex justify-between items-center"
+          >
+            <div>
+              <span className="font-medium text-gray-800">{u.fullName}</span>
             </div>
-          )}
+            <div className="flex gap-2 items-center">
+              <span className="px-2 py-1 rounded text-xs border border-blue-200 bg-blue-50 text-blue-700">
+                active
+              </span>
+              <button
+                className="px-3 py-1 bg-green-500 text-white rounded hover:bg-green-700"
+                onClick={() => {
+                  setSelectedProfileUser(u);
+                  setIsAgentProfile(false);  // <-- Set false for users
+                }}
+              >
+                Profile
+              </button>
+            </div>
+          </li>
+        ))}
+    </ul>
+  </div>
+)}
+
+
           {/* PLANS: your existing plans card list */}
           {selected === "Plans" && (
             <div
@@ -653,13 +795,23 @@ export default function AdminDashboard() {
         </Modal>
       )}
       {selectedProfileUser && (
-        <Modal onClose={() => setSelectedProfileUser(null)}>
-          <UserProfileInfo
-            userId={selectedProfileUser.id}
-            onClose={() => setSelectedProfileUser(null)}
-          />
-        </Modal>
-      )}
+  <Modal
+    onClose={() => {
+      setSelectedProfileUser(null);
+      setIsAgentProfile(false);
+    }}
+  >
+    <UserProfileInfo
+      userId={selectedProfileUser.id}
+      isAgent={isAgentProfile}  // <-- Pass the flag
+      onClose={() => {
+        setSelectedProfileUser(null);
+        setIsAgentProfile(false);
+      }}
+    />
+  </Modal>
+)}
+
       {showPlanForm && (
         <Modal onClose={() => setShowPlanForm(false)}>
           <AddPlanForm

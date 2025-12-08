@@ -58,7 +58,8 @@ export function AddPlanForm({ onAdd, onClose, edit = false, plan = null }) {
         name: "",
         description: "",
         monthlyPremium: "",
-        coverageAmount: ""
+        coverageAmount: "",
+        tenure: ""
       });
       onClose();
     } catch (error) {
@@ -102,6 +103,14 @@ export function AddPlanForm({ onAdd, onClose, edit = false, plan = null }) {
         className="w-full border text-black border-blue-200 rounded-lg p-2"
         value={form.coverageAmount}
         onChange={e => setForm({ ...form, coverageAmount: e.target.value })}
+        required
+      />
+      <input
+        type="number"
+        placeholder="Tenure"
+        className="w-full border text-black border-blue-200 rounded-lg p-2"
+        value={form.tenure}
+        onChange={e => setForm({ ...form, tenure: e.target.value })}
         required
       />
       <button

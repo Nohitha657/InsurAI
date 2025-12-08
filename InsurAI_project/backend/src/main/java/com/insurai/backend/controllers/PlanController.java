@@ -1,7 +1,9 @@
 package com.insurai.backend.controllers;
 
 import com.insurai.backend.entities.Plan;
+import com.insurai.backend.entities.User;
 import com.insurai.backend.repositories.PlanRepository;
+import com.insurai.backend.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,7 +16,7 @@ import java.util.Map;
 @RequestMapping("/api/plans")
 public class PlanController {
     @Autowired private PlanRepository planRepository;
-
+    @Autowired private UserRepository userRepository;
     // Get all plans (visible to all)
     @GetMapping
     public List<Plan> getAll() { return planRepository.findAll(); }
@@ -48,4 +50,35 @@ public class PlanController {
         planRepository.deleteById(id);
         return ResponseEntity.ok().build();
     }
+//    @GetMapping("/me/plan-summary")
+//    public ResponseEntity<?> getMyPlanSummary(@RequestParam String email) {
+//        User user = userRepository.findByEmail(email).orElse(null);
+//        if (user == null) {
+//            return ResponseEntity.badRequest()
+//                    .body(Map.of("message", "User not found"));
+//        }
+//
+//        Plan plan = user.getPlan();   // or however you link user → plan
+//        if (plan == null) {
+//            return ResponseEntity.ok(Map.of("hasPlan", false));
+//        }
+//
+//        // EXAMPLE: adapt these to your real Plan fields
+//        double totalAmount   = plan.getCoverageAmount();   // total sum insured / total amount
+//        double monthlyAmount = plan.getMonthlyPremium();  // monthly premium
+//
+//        // if you do not yet store paid amount, set it 0 for now
+//        double paidAmount = 0.0;
+//        double dueAmount  = totalAmount - paidAmount;
+//
+//        Map<String, Object> dto = Map.of(
+//                "hasPlan", true,
+//                "planName", plan.getName(),
+//                "totalAmount", totalAmount,
+//                "monthlyAmount", monthlyAmount,
+//                "dueAmount", dueAmount
+//        );
+//        return ResponseEntity.ok(dto);
+//    }
+
 }

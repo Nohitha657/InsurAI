@@ -19,13 +19,14 @@ public class User {
     @JoinColumn(name = "plan_id")
     private Plan plan;
 
-    private double paidAmount; // For paid tracking
+    private Double totalAmount;    // overall plan amount
+    private Double monthlyAmount;  // monthly premium for this user
+    private Double paidAmount;     // how much user already paid
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Map to column full_name in DB
     @Column(name = "full_name", nullable = false)
     private String fullName;
 
@@ -36,5 +37,11 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String role; // "user" or "admin"
+    private String role;
+
+    @Column(nullable = true, unique = true)
+    private Long phone;
+
+    @Column(nullable = true)
+    private String address;
 }

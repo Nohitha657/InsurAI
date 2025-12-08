@@ -46,6 +46,7 @@ export default function LoginForm() {
           router.push("/admin");
         } else if (res.data.user.role === "agent") {
           localStorage.setItem("agentEmail", userEmail);
+          localStorage.setItem("agentName", res.data.user.fullName);
           router.push("/agent");
         }
         else {

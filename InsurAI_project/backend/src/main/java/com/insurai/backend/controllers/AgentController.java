@@ -2,9 +2,11 @@ package com.insurai.backend.controllers;
 
 import com.insurai.backend.dto.AgentProfileDTO;
 import com.insurai.backend.entities.Agent;
+import com.insurai.backend.entities.Claim;
 import com.insurai.backend.entities.Plan;
 import com.insurai.backend.entities.User;
 import com.insurai.backend.repositories.AgentRepository;
+import com.insurai.backend.repositories.ClaimRepository;
 import com.insurai.backend.repositories.UserRepository;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,9 @@ public class AgentController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ClaimRepository claimRepository;
+
     // ---------- BASIC LISTS ----------
 
     @GetMapping
@@ -40,10 +45,10 @@ public class AgentController {
     }
 
 
-    @PostMapping   // <-- plain POST /api/agents
+     // <-- plain POST /api/agents
+    @PostMapping
     public ResponseEntity<?> createAgent(@RequestBody Agent agent) {
         try {
-            // Optional: avoid duplicate email
             if (agentRepository.findByEmail(agent.getEmail()).isPresent()) {
                 return ResponseEntity
                         .badRequest()
@@ -54,7 +59,7 @@ public class AgentController {
                 agent.setStatus("active");
             }
 
-            String commonPassword = "Admin@123";   // default password
+            String commonPassword = "Agent@123";
             String hashed = new BCryptPasswordEncoder().encode(commonPassword);
             agent.setPassword(hashed);
 
@@ -119,39 +124,37 @@ public class AgentController {
             return ResponseEntity.badRequest().body("Agent not found");
         }
         Agent agent = agentOpt.get();
-        List<User> users = userRepository.findByAgent(agent);
 
-        int policiesRegistered = users.size();
-        int runningPolicies = 0;
-        int completedPolicies = 0;
-        double totalAmount = 0.0;
-        double paidAmount = 0.0;
+        // get all claims for this agent
+        List<Claim> allClaims = claimRepository.findByAgentName(agent.getName());
 
-        for (User user : users) {
-            Plan plan = user.getPlan();
-            if (plan != null) {
-                String st = plan.getStatus();
-                if ("running".equalsIgnoreCase(st)) {
-                    runningPolicies++;
-                } else if ("completed".equalsIgnoreCase(st)) {
-                    completedPolicies++;
+        int totalClaims = allClaims.size();
+        int pendingClaims = 0;
+        int approvedClaims = 0;
+        int completedClaims = 0;
+
+        for (Claim c : allClaims) {
+            String status = c.getStatus();
+            if ("APPROVED".equals(status)) {
+                if (c.isCompleted()) {
+                    completedClaims++;
+                } else {
+                    approvedClaims++;  // approved but not completed = running
                 }
-
-                // These getters must match your Plan.java
-                totalAmount += plan.getMonthlyPremium();
-                paidAmount += plan.getCoverageAmount();
+            } else {
+                pendingClaims++;  // PENDING or REQUEST_SENT
             }
         }
 
         Map<String, Object> body = Map.of(
-                "policiesRegistered", policiesRegistered,
-                "runningPolicies", runningPolicies,
-                "completedPolicies", completedPolicies,
-                "totalAmount", totalAmount,
-                "paidAmount", paidAmount
+                "totalClaims", totalClaims,
+                "pendingClaims", pendingClaims,
+                "runningClaims", approvedClaims,       // approved but not completed
+                "completedClaims", completedClaims
         );
         return ResponseEntity.ok(body);
     }
+
 
     // Appointments list for agent (currently empty): GET /api/agents/me/appointments?email=...
     @GetMapping("/me/appointments")
